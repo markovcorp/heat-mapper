@@ -26,13 +26,12 @@ using std::make_unique;
 #define IMG_HDR  ( 9 )
 #define IMG_SIZE ( IMG_WIDTH * IMG_HEIGHT + IMG_HDR )
 
-void LeptonFrameGrabber::OpenPorts(int vid) {
-	prepareCamera(0);
+void LeptonFrameGrabber::OpenPorts() {
+	initLepton(IMG_WIDTH,IMG_HEIGHT);
 }
 
 int LeptonFrameGrabber::ClosePorts() {
-	uninitdevice();
-	closedevice();
+	deinit();
 }
 
 LeptonFrameGrabber::LeptonFrameGrabber(std::string fileName) : imageData( IMG_WIDTH*IMG_HEIGHT ),
@@ -64,7 +63,7 @@ LeptonFrameGrabber::LeptonFrameGrabber(std::string fileName) : imageData( IMG_WI
 	timeWhenLastReset = MarkovTools::TimeTools::getEpochTime();
 
 	//open v4l port
-	OpenPorts(0);
+	OpenPorts();
 }
 
 LeptonFrameGrabber::~LeptonFrameGrabber() {
@@ -163,7 +162,7 @@ void LeptonFrameGrabber::leptonFrameGrabberThread(void)
 {
 	uint16_t lastChksum = 0;
 	grabLeptonFrame = false;
-	vector<uint8_t> data(60*80*2 + 8); // 4600 uint16 words and a double for frame-rate.
+	vector<uint8_t> data(IMG_HEIGHT*IMG_WIDTH*2 + 8); // 4600 uint16 words and a double for frame-rate.
 	framesSinceLastReset = 0;
 	timeWhenLastReset = MarkovTools::TimeTools::getEpochTime();
 	while (!stopRunningLeptonThread)
@@ -240,8 +239,8 @@ vector<uint16_t> LeptonFrameGrabber::GrabImage()
 {
 	std::vector<uint16_t> ret;
 	printf("reading frame\n");
-	if (readframeonce() == SUCCESS_LOCAL) {
-		int *buf = getbuf();
+	uint16_t *buf = 0;
+	if (readframeonce( buf )) {
 		for (int i = 0; i < IMG_WIDTH*IMG_HEIGHT; i++) {	
 			ret.push_back(buf[i]);
 		}
