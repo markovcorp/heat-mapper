@@ -39,7 +39,7 @@ public:
   int getRadModeState();
   int getRBFO();
   int setRBFO();
-  void OpenPorts(int vid);
+  void OpenPorts();
   int ClosePorts();
   int createLeptonThread();
   void leptonFrameGrabberThread();
