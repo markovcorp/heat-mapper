@@ -6,7 +6,6 @@
 #include "markovTimeTools.h"
 
 #include <iostream> 
-#include <boost/python.hpp>
 #include <vector>
 #include <string>
 
@@ -17,7 +16,6 @@
 #define FPS 27
 
 
-using namespace boost::python;
 using std::vector;
 using std::endl;
 using std::cout;
@@ -50,7 +48,7 @@ LeptonFrameGrabber::LeptonFrameGrabber(std::string fileName) : imageData( IMG_WI
 	lwirImg.hdr.time = 0;
 	lwirImg.hdr.internal_temp = -100;
 
-	lwirImg.img = new uint16_t[lwirImg.hdr.w * lwirImg.hdr.h];
+	lwirImg.img = new uint16_t[  IMG_WIDTH * IMG_HEIGHT ];
 
 	leptonThreadCreated = false;
 	singleLeptonPoll = false;
@@ -234,18 +232,29 @@ double LeptonFrameGrabber::getLeptonFrameRate()
 	return leptonFramerate;
 }
 
+void LeptonFrameGrabber::updateImageStats(uint16_t *buf, int len)
+{
+	uint16_t min = 65535, max=0;
+	for (int i=0; i<len; i++) {
+		if (buf[i]<min) min = buf[i];
+		if (buf[i]>max) max = buf[i];
+	}
+	lwirImg.hdr.low = min;
+	lwirImg.hdr.high = max;
+}
 
 vector<uint16_t> LeptonFrameGrabber::GrabImage()
 {
-	std::vector<uint16_t> ret;
+	std::vector<uint16_t> ret(IMG_WIDTH*IMG_HEIGHT);
 	printf("reading frame\n");
-	uint16_t *buf = 0;
-	if (readframeonce( buf )) {
-		for (int i = 0; i < IMG_WIDTH*IMG_HEIGHT; i++) {	
-			ret.push_back(buf[i]);
-		}
+	if (readframeonce( &ret[0] )) {
+	    memcpy(lwirImg.img, &ret[0], IMG_WIDTH*IMG_HEIGHT*2);
+	    lwirImg.hdr.time = MarkovTools::TimeTools::getEpochTime();
+	    updateImageStats(&ret[0],ret.size());
+	    lptFrame->writeFrame(&lwirImg);
+	    printf("done\n");
 	}
-	printf("done frame\n");
+	
 	return ret;
 }
 
